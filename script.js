@@ -1,6 +1,23 @@
 const list = document.querySelector("#repository-list");
 const status = document.querySelector("#repository-status");
 
+function isRepository(repository) {
+  if (
+    !repository
+    || typeof repository.name !== "string"
+    || typeof repository.description !== "string"
+    || typeof repository.url !== "string"
+    || typeof repository.starredAt !== "string"
+    || !/^\d{4}-\d{2}-\d{2}$/.test(repository.starredAt)
+  ) {
+    return false;
+  }
+
+  const date = new Date(`${repository.starredAt}T00:00:00Z`);
+  return !Number.isNaN(date.getTime())
+    && date.toISOString().slice(0, 10) === repository.starredAt;
+}
+
 function renderRepositories(repositories) {
   list.replaceChildren();
 
@@ -38,14 +55,15 @@ async function loadRepositories() {
     }
 
     const data = await response.json();
-    if (!Array.isArray(data.repositories)) {
+    if (!data || !Array.isArray(data.repositories) || !data.repositories.every(isRepository)) {
       throw new Error("Repository data has an invalid format.");
     }
 
     renderRepositories(data.repositories);
   } catch (error) {
     status.setAttribute("role", "alert");
-    status.textContent = `Could not load starred repositories: ${error.message}`;
+    const message = error instanceof Error ? error.message : "An unexpected error occurred.";
+    status.textContent = `Could not load starred repositories: ${message}`;
   }
 }
 
